@@ -75,7 +75,27 @@ public:
 
     }
 
-    void deleteOrder(uint64_t order) {
-
+    void deleteOrder(uint64_t orderId) {
+        auto mapIter = orders.find(orderId);
+        if (mapIter == orders.end()) {
+            return;
+        }
+        auto listIter = mapIter->second;
+        uint64_t price = listIter->price;
+        Side side = listIter->side;
+        if (side == Side::ASK) {
+            auto& orderList = asks[price];
+            orderList.erase(listIter);
+            if (orderList.empty()) {
+                asks.erase(price);
+            }
+        } else {
+            auto& orderList = bids[price];
+            orderList.erase(listIter);
+            if (orderList.empty()) {
+                bids.erase(price);
+            }
+        }
+        orders.erase(mapIter);
     }
 };
