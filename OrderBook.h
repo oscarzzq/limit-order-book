@@ -5,6 +5,8 @@
 #pragma once
 #include <map>
 #include <list>
+#include <vector>
+#include <unordered_map>
 #include "Order.h"
 #include "Trade.h"
 
