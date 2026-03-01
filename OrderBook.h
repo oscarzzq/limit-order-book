@@ -6,11 +6,16 @@
 #include <map>
 #include <list>
 #include "Order.h"
+#include "Trade.h"
+
+using std::uint64_t;
 
 class OrderBook {
     std::map<uint64_t, std::list<Order>> asks;
     std::map<uint64_t, std::list<Order>, std::greater<>> bids;
     std::unordered_map<uint64_t, std::list<Order>::iterator> orders;
+    std::vector<Trade> trades;
+    uint64_t nextTradeId = 0;
 
 public:
     void addOrder(Order order) {
@@ -18,21 +23,16 @@ public:
             while (!bids.empty() && order.quantity > 0 && bids.begin()->first >= order.price) {
                 if (bids.begin()->second.front().quantity < order.quantity) {
                     order.quantity -= bids.begin()->second.front().quantity;
-                    completeExchange(order.id, bids.begin()->second.front().id);
+                    //completeExchange(order.id, bids.begin()->second.front().id);
+                    completeExchange(bids.begin()->second.front(), order, bids.begin()->second.front().quantity);
                     deleteOrder(bids.begin()->second.front().id);
-                    if (bids.begin()->second.empty()) {
-                        bids.erase(bids.begin());
-                    }
                 } else if (bids.begin()->second.front().quantity == order.quantity) {
-                    completeExchange(order.id, bids.begin()->second.front().id);
+                    completeExchange(bids.begin()->second.front(), order, order.quantity);
                     order.quantity = 0;
                     deleteOrder(bids.begin()->second.front().id);
-                    if (bids.begin()->second.empty()) {
-                        bids.erase(bids.begin());
-                    }
                 } else {
                     bids.begin()->second.front().quantity -= order.quantity;
-                    completeExchange(order.id, bids.begin()->second.front().id);
+                    completeExchange(bids.begin()->second.front(), order, order.quantity);
                     order.quantity = 0;
                 }
             }
@@ -45,21 +45,16 @@ public:
             while (!asks.empty() && order.quantity > 0 && asks.begin()->first <= order.price) {
                 if (asks.begin()->second.front().quantity < order.quantity) {
                     order.quantity -= asks.begin()->second.front().quantity;
-                    completeExchange(asks.begin()->second.front().id, order.id);
+                    //completeExchange(asks.begin()->second.front().id, order.id);
+                    completeExchange(asks.begin()->second.front(), order, asks.begin()->second.front().quantity);
                     deleteOrder(asks.begin()->second.front().id);
-                    if (asks.begin()->second.empty()) {
-                        asks.erase(asks.begin());
-                    }
                 } else if (asks.begin()->second.front().quantity == order.quantity) {
-                    completeExchange(asks.begin()->second.front().id, order.id);
+                    completeExchange(asks.begin()->second.front(), order, order.quantity);
                     order.quantity = 0;
                     deleteOrder(asks.begin()->second.front().id);
-                    if (asks.begin()->second.empty()) {
-                        asks.erase(asks.begin());
-                    }
                 } else {
                     asks.begin()->second.front().quantity -= order.quantity;
-                    completeExchange(asks.begin()->second.front().id, order.id);
+                    completeExchange(asks.begin()->second.front(), order, order.quantity);
                     order.quantity = 0;
                 }
             }
@@ -71,8 +66,10 @@ public:
         }
     }
 
-    void completeExchange(uint64_t orderAsk, uint64_t orderBid) {
-
+    void completeExchange(const Order& restingOrder, const Order& incomingOrder, uint64_t quantity) {
+        uint64_t sellerId = restingOrder.side == Side::ASK ? restingOrder.id : incomingOrder.id;
+        uint64_t buyerId = restingOrder.side == Side::BID ? restingOrder.id : incomingOrder.id;
+        trades.push_back(Trade(nextTradeId++, quantity, restingOrder.price, restingOrder.instrumentId, buyerId, sellerId));
     }
 
     void deleteOrder(uint64_t orderId) {

@@ -6,4 +6,5 @@ set(CMAKE_CXX_STANDARD 20)
 add_executable(limit_order_book main.cpp
         Order.h
         OrderBook.h
+        Trade.h
 )
